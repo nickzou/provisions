@@ -68,6 +68,7 @@
             dest: "{{ dotfiles_dir }}"
             version: main
             update: true
+            force: true
 
         - name: Check for default dotfiles that would conflict with stow
           ansible.builtin.stat:
