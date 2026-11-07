@@ -57,14 +57,14 @@
     - name: Clone dotfiles
       ansible.builtin.git:
         repo: https://github.com/nickzou/dotfiles.git
-        dest: "/root/dotfiles"
+        dest: "{{ dotfiles_dir }}"
         version: main
         update: true
       become: true
 
     - name: Check for default dotfiles that would conflict with stow
       ansible.builtin.stat:
-        path: "/root/{{ item }}"
+        path: "{{ user_home }}/{{ item }}"
       loop: [.bashrc, .bash_aliases, .zshrc]
       register: default_dotfiles
 
@@ -79,7 +79,7 @@
     - name: Stow dotfiles
       ansible.builtin.command:
         cmd: stow --restow {{ item }}
-        chdir: /root/dotfiles
+        chdir: "{{ dotfiles_dir }}"
       loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
       become: false
       changed_when: false
