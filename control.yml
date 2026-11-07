@@ -51,7 +51,7 @@
 
     - name: Make zsh the default shell
       ansible.builtin.user:
-        name: "{{ ansible_facts['user_id'] }}"
+        name: "{{ shell_user }}"
         shell: /usr/bin/zsh
 
     - name: Clone dotfiles
