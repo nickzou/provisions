@@ -56,6 +56,20 @@
         update: true
       become: true
 
+    - name: Check for default dotfiles that would conflict with stow
+      ansible.builtin.stat:
+        path: "/root/{{ item }}"
+      loop: [.bashrc, .bash_aliases, .zshrc]
+      register: default_dotfiles
+
+    - name: Back up default dotfiles so stow can replace them with links
+      ansible.builtin.command:
+        cmd: mv "{{ item.stat.path }}" "{{ item.stat.path }}.bak"
+      loop: "{{ default_dotfiles.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stat.exists and item.stat.isreg
+
     - name: Stow dotfiles
       ansible.builtin.command:
         cmd: stow --restow {{ item }}
