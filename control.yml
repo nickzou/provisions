@@ -22,6 +22,9 @@
       - lazygit
       - curl
       - unzip
+      - nodejs
+      - npm
+      - golang-go
 
   tasks:
     - name: Install packages
