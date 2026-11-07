@@ -1,0 +1,62 @@
+---
+
+- name: Ansible control node
+  hosts: control
+  become: true
+  
+  vars:
+    control_packages:
+      - zsh
+      - tmux
+      - neovim
+      - git
+      - stow
+      - ripgrep
+      - fd-find
+      - fzf
+      - bat
+      - zoxide
+      - lsd
+      - build-essential
+      - fastfetch
+      - lazygit
+      - curl
+      - unzip
+
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name: "{{ control_packages }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Link Debian binary names to their usual names
+      ansible.builtin.file:
+        src: "/usr/bin/{{ item.src }}"
+        dest: "/usr/local/bin/{{ item.dest }}"
+        state: link
+      loop:
+        - { src: fdfind, dest: fd }
+        - { src: batcat, dest: bat }
+
+    - name: Make zsh the default shell
+      ansible.builtin.user:
+        name: "{{ ansible_facts['user_id'] }}"
+        shell: /usr/bin/zsh
+
+    - name: Clone dotfiles
+      ansible.builtin.git:
+        repo: https://github.com/nickzou/dotfiles.git
+        dest: "/root/dotfiles"
+        version: main
+        update: true
+      become: true
+
+    - name: Stow dotfiles
+      ansible.builtin.command:
+        cmd: stow --restow {{ item }}
+        chdir: /root/dotfiles
+      loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
+      become: false
+      changed_when: false
