@@ -2,8 +2,8 @@
 
 - name: Ansible control node
   hosts: control
-  become: true
-  
+  become: false
+
   vars:
     control_packages:
       - zsh
@@ -26,60 +26,66 @@
       - nodejs
       - npm
       - golang-go
+      - acl
 
   tasks:
-    - name: Install packages
-      ansible.builtin.apt:
-        name: "{{ control_packages }}"
-        state: present
-        update_cache: true
-        cache_valid_time: 3600
-
-    - name: Link Debian binary names to their usual names
-      ansible.builtin.file:
-        src: "/usr/bin/{{ item.src }}"
-        dest: "/usr/local/bin/{{ item.dest }}"
-        state: link
-      loop:
-        - { src: fdfind, dest: fd }
-        - { src: batcat, dest: bat }
-
-    - name: Install starship
-      ansible.builtin.shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
-      args:
-        creates: /usr/local/bin/starship
-
-    - name: Make zsh the default shell
-      ansible.builtin.user:
-        name: "{{ shell_user }}"
-        shell: /usr/bin/zsh
-
-    - name: Clone dotfiles
-      ansible.builtin.git:
-        repo: https://github.com/nickzou/dotfiles.git
-        dest: "{{ dotfiles_dir }}"
-        version: main
-        update: true
+    - name: System setup
       become: true
+      block:
+        - name: Install packages
+          ansible.builtin.apt:
+            name: "{{ control_packages }}"
+            state: present
+            update_cache: true
+            cache_valid_time: 3600
 
-    - name: Check for default dotfiles that would conflict with stow
-      ansible.builtin.stat:
-        path: "{{ user_home }}/{{ item }}"
-      loop: [.bashrc, .bash_aliases, .zshrc]
-      register: default_dotfiles
+        - name: Link Debian binary names to their usual names
+          ansible.builtin.file:
+            src: "/usr/bin/{{ item.src }}"
+            dest: "/usr/local/bin/{{ item.dest }}"
+            state: link
+          loop:
+            - { src: fdfind, dest: fd }
+            - { src: batcat, dest: bat }
 
-    - name: Back up default dotfiles so stow can replace them with links
-      ansible.builtin.command:
-        cmd: mv "{{ item.stat.path }}" "{{ item.stat.path }}.bak"
-      loop: "{{ default_dotfiles.results }}"
-      loop_control:
-        label: "{{ item.item }}"
-      when: item.stat.exists and item.stat.isreg
+        - name: Install starship
+          ansible.builtin.shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
+          args:
+            creates: /usr/local/bin/starship
 
-    - name: Stow dotfiles
-      ansible.builtin.command:
-        cmd: stow --restow {{ item }}
-        chdir: "{{ dotfiles_dir }}"
-      loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
-      become: false
-      changed_when: false
+        - name: Make zsh the default shell
+          ansible.builtin.user:
+            name: "{{ shell_user }}"
+            shell: /usr/bin/zsh
+
+    - name: User setup
+      become: true
+      become_user: "{{ shell_user }}"
+      block:
+        - name: Clone dotfiles
+          ansible.builtin.git:
+            repo: https://github.com/nickzou/dotfiles.git
+            dest: "{{ dotfiles_dir }}"
+            version: main
+            update: true
+
+        - name: Check for default dotfiles that would conflict with stow
+          ansible.builtin.stat:
+            path: "{{ user_home }}/{{ item }}"
+          loop: [.bashrc, .bash_aliases, .zshrc]
+          register: default_dotfiles
+
+        - name: Back up default dotfiles so stow can replace them with links
+          ansible.builtin.command:
+            cmd: mv "{{ item.stat.path }}" "{{ item.stat.path }}.bak"
+          loop: "{{ default_dotfiles.results }}"
+          loop_control:
+            label: "{{ item.item }}"
+          when: item.stat.exists and item.stat.isreg
+
+        - name: Stow dotfiles
+          ansible.builtin.command:
+            cmd: stow --restow {{ item }}
+            chdir: "{{ dotfiles_dir }}"
+          loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
+          changed_when: false
