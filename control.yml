@@ -43,6 +43,11 @@
         - { src: fdfind, dest: fd }
         - { src: batcat, dest: bat }
 
+    - name: Install starship
+      ansible.builtin.shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
+      args:
+        creates: /usr/local/bin/starship
+
     - name: Make zsh the default shell
       ansible.builtin.user:
         name: "{{ ansible_facts['user_id'] }}"
@@ -74,6 +79,6 @@
       ansible.builtin.command:
         cmd: stow --restow {{ item }}
         chdir: /root/dotfiles
-      loop: [zsh, bash, nvim, tmux, lsd, lazygit, fastfetch]
+      loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
       become: false
       changed_when: false
