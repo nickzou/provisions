@@ -60,6 +60,6 @@
       ansible.builtin.command:
         cmd: stow --restow {{ item }}
         chdir: /root/dotfiles
-      loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
+      loop: [zsh, bash, nvim, tmux, lsd, lazygit, fastfetch]
       become: false
       changed_when: false
