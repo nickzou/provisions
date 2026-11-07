@@ -20,6 +20,7 @@
       - build-essential
       - fastfetch
       - lazygit
+      - git-delta
       - curl
       - unzip
       - nodejs
