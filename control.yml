@@ -64,7 +64,7 @@
       block:
         - name: Clone dotfiles
           ansible.builtin.git:
-            repo: https://github.com/nickzou/dotfiles.git
+            repo: https://github.com/nickzou/server-dotfiles.git
             dest: "{{ dotfiles_dir }}"
             version: main
             update: true
