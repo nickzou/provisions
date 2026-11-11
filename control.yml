@@ -27,11 +27,29 @@
       - npm
       - golang-go
       - acl
+      - gh
+
+    hunk_version: 0.24.1
 
   tasks:
     - name: System setup
       become: true
       block:
+        - name: Add GitHub CLI apt repository
+          ansible.builtin.deb822_repository:
+            name: github-cli
+            types: deb
+            uris: https://cli.github.com/packages
+            suites: stable
+            components: main
+            signed_by: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+          register: github_cli_repo
+
+        - name: Refresh apt cache for the new repository
+          ansible.builtin.apt:
+            update_cache: true
+          when: github_cli_repo.changed
+
         - name: Install packages
           ansible.builtin.apt:
             name: "{{ control_packages }}"
@@ -52,6 +70,19 @@
           ansible.builtin.shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
           args:
             creates: /usr/local/bin/starship
+
+        - name: Install hunk
+          ansible.builtin.unarchive:
+            src: "https://github.com/modem-dev/hunk/releases/download/v{{ hunk_version }}/hunkdiff-linux-x64.tar.gz"
+            dest: /opt
+            remote_src: true
+            creates: /opt/hunkdiff-linux-x64/hunk
+
+        - name: Link hunk onto PATH
+          ansible.builtin.file:
+            src: /opt/hunkdiff-linux-x64/hunk
+            dest: /usr/local/bin/hunk
+            state: link
 
         - name: Make zsh the default shell
           ansible.builtin.user:
@@ -90,3 +121,15 @@
             chdir: "{{ dotfiles_dir }}"
           loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
           changed_when: false
+
+        - name: Check whether gh is logged in
+          ansible.builtin.command: gh auth status
+          register: gh_auth
+          changed_when: false
+          failed_when: false
+
+        - name: Install gh-dash extension
+          ansible.builtin.command: gh extension install dlvhdr/gh-dash
+          args:
+            creates: "{{ user_home }}/.local/share/gh/extensions/gh-dash"
+          when: gh_auth.rc == 0
