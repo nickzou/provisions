@@ -28,8 +28,14 @@
       - golang-go
       - acl
       - gh
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
 
     hunk_version: 0.24.1
+    lazydocker_version: 0.25.2
 
   tasks:
     - name: System setup
@@ -45,10 +51,20 @@
             signed_by: https://cli.github.com/packages/githubcli-archive-keyring.gpg
           register: github_cli_repo
 
-        - name: Refresh apt cache for the new repository
+        - name: Add Docker apt repository
+          ansible.builtin.deb822_repository:
+            name: docker
+            types: deb
+            uris: https://download.docker.com/linux/ubuntu
+            suites: "{{ ansible_facts['distribution_release'] }}"
+            components: stable
+            signed_by: https://download.docker.com/linux/ubuntu/gpg
+          register: docker_repo
+
+        - name: Refresh apt cache for new repositories
           ansible.builtin.apt:
             update_cache: true
-          when: github_cli_repo.changed
+          when: github_cli_repo.changed or docker_repo.changed
 
         - name: Install packages
           ansible.builtin.apt:
@@ -71,6 +87,14 @@
           args:
             creates: /usr/local/bin/starship
 
+        - name: Install lazydocker
+          ansible.builtin.unarchive:
+            src: "https://github.com/jesseduffield/lazydocker/releases/download/v{{ lazydocker_version }}/lazydocker_{{ lazydocker_version }}_Linux_x86_64.tar.gz"
+            dest: /usr/local/bin
+            remote_src: true
+            include: [lazydocker]
+            creates: /usr/local/bin/lazydocker
+
         - name: Install hunk
           ansible.builtin.unarchive:
             src: "https://github.com/modem-dev/hunk/releases/download/v{{ hunk_version }}/hunkdiff-linux-x64.tar.gz"
@@ -84,10 +108,28 @@
             dest: /usr/local/bin/hunk
             state: link
 
-        - name: Make zsh the default shell
+        - name: Cap Docker container log size
+          ansible.builtin.copy:
+            dest: /etc/docker/daemon.json
+            content: |
+              {
+                "log-driver": "local"
+              }
+            mode: "0644"
+          notify: Restart Docker
+
+        - name: Start Docker on boot
+          ansible.builtin.systemd_service:
+            name: docker
+            state: started
+            enabled: true
+
+        - name: Make zsh the default shell and let the user run docker
           ansible.builtin.user:
             name: "{{ shell_user }}"
             shell: /usr/bin/zsh
+            groups: docker
+            append: true
 
     - name: User setup
       become: true
@@ -133,3 +175,10 @@
           args:
             creates: "{{ user_home }}/.local/share/gh/extensions/gh-dash"
           when: gh_auth.rc == 0
+
+  handlers:
+    - name: Restart Docker
+      become: true
+      ansible.builtin.systemd_service:
+        name: docker
+        state: restarted
