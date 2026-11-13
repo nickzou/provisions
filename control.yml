@@ -176,6 +176,12 @@
             creates: "{{ user_home }}/.local/share/gh/extensions/gh-dash"
           when: gh_auth.rc == 0
 
+        - name: Install Claude Code
+          ansible.builtin.shell: set -o pipefail && curl -fsSL https://claude.ai/install.sh | bash
+          args:
+            executable: /bin/bash
+            creates: "{{ user_home }}/.local/bin/claude"
+
   handlers:
     - name: Restart Docker
       become: true
