@@ -35,6 +35,7 @@
       - docker-compose-plugin
 
     hunk_version: 0.24.1
+    lazydocker_version: 0.25.2
 
   tasks:
     - name: System setup
@@ -85,6 +86,14 @@
           ansible.builtin.shell: curl -sS https://starship.rs/install.sh | sh -s -- -y
           args:
             creates: /usr/local/bin/starship
+
+        - name: Install lazydocker
+          ansible.builtin.unarchive:
+            src: "https://github.com/jesseduffield/lazydocker/releases/download/v{{ lazydocker_version }}/lazydocker_{{ lazydocker_version }}_Linux_x86_64.tar.gz"
+            dest: /usr/local/bin
+            remote_src: true
+            include: [lazydocker]
+            creates: /usr/local/bin/lazydocker
 
         - name: Install hunk
           ansible.builtin.unarchive:
