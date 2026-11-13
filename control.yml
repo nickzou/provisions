@@ -165,6 +165,12 @@
           loop: [zsh, bash, nvim, tmux, starship, lsd, lazygit, fastfetch]
           changed_when: false
 
+        - name: Install tpm and tmux plugins
+          ansible.builtin.command: "{{ dotfiles_dir }}/tmux/bootstrap.sh"
+          register: tmux_bootstrap
+          changed_when: "'nstalling' in tmux_bootstrap.stdout"
+          notify: Reload tmux config
+
         - name: Check whether gh is logged in
           ansible.builtin.command: gh auth status
           register: gh_auth
