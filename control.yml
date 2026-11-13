@@ -142,6 +142,7 @@
             version: main
             update: true
             force: true
+          notify: Reload tmux config
 
         - name: Check for default dotfiles that would conflict with stow
           ansible.builtin.stat:
@@ -188,3 +189,11 @@
       ansible.builtin.systemd_service:
         name: docker
         state: restarted
+
+    - name: Reload tmux config
+      become: true
+      become_user: "{{ shell_user }}"
+      ansible.builtin.shell: >-
+        if tmux has-session 2>/dev/null; then
+        tmux source-file {{ user_home }}/.config/tmux/tmux.conf;
+        fi
