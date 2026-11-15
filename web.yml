@@ -1,0 +1,93 @@
+---
+# Prepares this server to host Docker apps behind a shared Traefik proxy.
+# Run control.yml first: it installs Docker and creates the docker group.
+
+- name: Web hosting
+  hosts: control
+  become: true
+
+  tasks:
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ server_hostname }}"
+
+    - name: Create deploy user
+      ansible.builtin.user:
+        name: "{{ deploy_user }}"
+        shell: /bin/bash
+        groups: docker
+        append: true
+
+    - name: Authorize the CI deploy key (no pty, no forwarding)
+      ansible.posix.authorized_key:
+        user: "{{ deploy_user }}"
+        key: "{{ deploy_ssh_public_key }}"
+        key_options: restrict
+
+    - name: Create app directories
+      ansible.builtin.file:
+        path: "/srv/{{ item }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0750"
+      loop: "{{ web_apps }}"
+
+    - name: Create app backup directories
+      ansible.builtin.file:
+        path: "/var/backups/{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+      loop: "{{ web_apps }}"
+
+    - name: Create the shared proxy network
+      community.docker.docker_network:
+        name: proxy
+
+    - name: Create Traefik directory
+      ansible.builtin.file:
+        path: /srv/traefik
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Create Traefik certificate store
+      ansible.builtin.file:
+        path: /srv/traefik/acme.json
+        state: touch
+        owner: root
+        group: root
+        mode: "0600"
+        modification_time: preserve
+        access_time: preserve
+
+    - name: Write Traefik static config
+      ansible.builtin.template:
+        src: traefik/traefik.yml.j2
+        dest: /srv/traefik/traefik.yml
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart Traefik
+
+    - name: Write Traefik compose file
+      ansible.builtin.template:
+        src: traefik/compose.yaml.j2
+        dest: /srv/traefik/compose.yaml
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Start Traefik
+      community.docker.docker_compose_v2:
+        project_src: /srv/traefik
+        state: present
+
+  handlers:
+    - name: Restart Traefik
+      community.docker.docker_compose_v2:
+        project_src: /srv/traefik
+        state: restarted
