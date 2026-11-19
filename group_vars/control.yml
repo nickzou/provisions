@@ -7,8 +7,11 @@ dotfiles_dir: "{{ user_home }}/server-dotfiles"
 # Web hosting (web.yml)
 server_hostname: parthica
 deploy_user: deploy
-# Public half of the GitHub Actions deploy key; the private half is a repo secret.
-deploy_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAHMZaG8Bi8TS7DDZnL5qbrQzLPx5SqsoK+Kaqwh/r5G github-actions-deploy@nick-zou"
+# Public halves of the GitHub Actions deploy keys, one per app repo; each
+# private half is that repo's SSH_KEY secret.
+deploy_ssh_public_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAHMZaG8Bi8TS7DDZnL5qbrQzLPx5SqsoK+Kaqwh/r5G github-actions-deploy@nick-zou"
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIICnZ8hCBZsZizW+eRppsS0npHz42/KdKUEdPTd1Nk8y github-actions-deploy@twilight-of-steel"
 # Each app gets /srv/<name> (deploy-owned) and /var/backups/<name>.
 web_apps:
   - nick-zou

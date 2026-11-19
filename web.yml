@@ -18,11 +18,14 @@
         groups: docker
         append: true
 
-    - name: Authorize the CI deploy key (no pty, no forwarding)
+    - name: Authorize the CI deploy keys (no pty, no forwarding)
       ansible.posix.authorized_key:
         user: "{{ deploy_user }}"
-        key: "{{ deploy_ssh_public_key }}"
+        key: "{{ item }}"
         key_options: restrict
+      loop: "{{ deploy_ssh_public_keys }}"
+      loop_control:
+        label: "{{ item.split(' ')[-1] }}"
 
     - name: Create app directories
       ansible.builtin.file:
