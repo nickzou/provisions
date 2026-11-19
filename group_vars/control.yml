@@ -12,6 +12,7 @@ deploy_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAHMZaG8Bi8TS7DDZnL5
 # Each app gets /srv/<name> (deploy-owned) and /var/backups/<name>.
 web_apps:
   - nick-zou
+  - twilight-of-steel
 traefik_version: v3.7.19
 # Optional: set to register the Let's Encrypt account with an email address.
 traefik_acme_email: ""
