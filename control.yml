@@ -131,6 +131,18 @@
             groups: docker
             append: true
 
+        # 00- so it wins: sshd keeps the first value it reads, and drop-ins load
+        # alphabetically ahead of cloud-init's 50-cloud-init.conf.
+        - name: Disable SSH password login
+          ansible.builtin.copy:
+            dest: /etc/ssh/sshd_config.d/00-hardening.conf
+            content: |
+              PasswordAuthentication no
+              KbdInteractiveAuthentication no
+            mode: "0644"
+            validate: /usr/sbin/sshd -t -f %s
+          notify: Reload sshd
+
     - name: User setup
       become: true
       become_user: "{{ shell_user }}"
@@ -195,6 +207,12 @@
       ansible.builtin.systemd_service:
         name: docker
         state: restarted
+
+    - name: Reload sshd
+      become: true
+      ansible.builtin.systemd_service:
+        name: ssh
+        state: reloaded
 
     - name: Reload tmux config
       become: true
